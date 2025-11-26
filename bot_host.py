@@ -602,7 +602,7 @@ class CascadeStartView(discord.ui.View):
         self.comment_text = None 
         self.initiator = initiator # Сохраняем инициатора для кнопки запуска
 
-    @discord.ui.button(label="Создать пати (Занять Слот 1) 🚀", style=discord.ButtonStyle.success, row=0, custom_id="cascade_start_btn")
+    @discord.ui.button(label="Создать пати 🚀", style=discord.ButtonStyle.success, row=0, custom_id="cascade_start_btn")
     async def start_party_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Логика создания тикета: автоматически занимает Слот 1."""
         
@@ -755,7 +755,7 @@ class MainNavigationView(discord.ui.View):
             return await interaction.response.send_message("❌ Канал поиска пати не настроен. Попросите администратора использовать `!set_lfg`.", ephemeral=True)
             
         await interaction.response.send_message(
-            "⏳ **Настройка пати на Каскад.** Вы автоматически займете **Слот 1**.\n\nНажмите **'Создать пати'** или сначала добавьте комментарий:",
+            "⏳ **Настройка пати на Каскад.** .\n\nНажмите **'Создать пати'** или сначала добавьте комментарий:",
             view=CascadeStartView(self.bot, interaction.user),
             ephemeral=True
         )
@@ -957,4 +957,5 @@ if __name__ == '__main__':
         print("Бот остановлен вручную.")
     except Exception as e:
         print(f"Критическая ошибка при запуске: {e}")
+
 
