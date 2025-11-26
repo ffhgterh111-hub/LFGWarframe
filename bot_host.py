@@ -2,19 +2,18 @@ import discord
 from discord.ext import commands
 import json
 from typing import Dict, Any, Optional
-import os # <-- ДОБАВЛЕНО: для работы с переменными окружения
-import asyncio # <-- ДОБАВЛЕНО: для асинхронного запуска бота и веб-сервера
-from aiohttp import web, ClientSession # <-- ДОБАВЛЕНО: для веб-сервера и самопинга
+import os # <-- Необходим для чтения переменных окружения (BOT_TOKEN, EXTERNAL_URL, PORT)
+import asyncio # <-- Необходим для асинхронного запуска бота и веб-сервера
+from aiohttp import web, ClientSession # <-- Необходим для веб-сервера и самопинга
 
 # =================================================================
 # 1. КОНСТАНТЫ И НАСТРОЙКИ
 # =================================================================
 
-# ВАЖНОЕ ИЗМЕНЕНИЕ: Токен теперь считывается из переменной окружения 'BOT_TOKEN'.
+# ВАЖНОЕ ИЗМЕНЕНИЕ: Токен считывается из переменной окружения 'BOT_TOKEN' на Render.
 BOT_TOKEN = os.environ.get('BOT_TOKEN') 
 if not BOT_TOKEN:
     print("❌ ВНИМАНИЕ: Переменная окружения 'BOT_TOKEN' не найдена. Бот не сможет запуститься.")
-
 
 CONFIG_FILE = 'config.json'
 LFG_TIMEOUT = 3600 # 1 час (в секундах)
@@ -121,7 +120,6 @@ ACTIVE_TICKETS = {}
 
 # =================================================================
 # 4. КЛАССЫ ИНТЕРАКТИВНЫХ КОМПОНЕНТОВ (VIEWS)
-# (Этот код остается без изменений)
 # =================================================================
 
 async def check_and_delete_old_ticket(initiator: discord.Member, lfg_channel):
@@ -461,7 +459,6 @@ class PartyView(discord.ui.View):
 
 # =================================================================
 # АРБИТРАЖ, КАСКАД, МОДАЛЬНЫЕ ОКНА И VIEW-КОНТЕЙНЕРЫ 
-# (Весь этот код остается без изменений)
 # =================================================================
 
 class RoleSelect(discord.ui.Select):
@@ -765,7 +762,6 @@ class MainNavigationView(discord.ui.View):
 
 # =================================================================
 # 5. АДМИНИСТРАТИВНЫЕ КОМАНДЫ ДЛЯ НАСТРОЙКИ
-# (Этот код остается без изменений)
 # =================================================================
 
 requires_admin = commands.has_permissions(manage_guild=True)
@@ -773,10 +769,46 @@ requires_admin = commands.has_permissions(manage_guild=True)
 @bot.command(name='set_nav')
 @requires_admin
 async def set_nav_channel(ctx, channel: discord.TextChannel):
+    """
+    [ИСПРАВЛЕНО] Устанавливает канал навигации и отправляет стартовое сообщение 
+    только по команде, а не при каждом запуске.
+    """
     global CONFIG
+    
+    # 1. Проверяем и удаляем старое сообщение (если оно было в этом канале)
+    async for message in channel.history(limit=5):
+        if message.author.id == ctx.bot.user.id and message.embeds:
+            embed_title = message.embeds[0].title
+            if embed_title and "СИСТЕМА ПОДБОРА ПАТИ WARFRAME" in embed_title:
+                try:
+                    await message.delete()
+                    await ctx.send(f"⚠️ Старое сообщение навигации в канале {channel.mention} удалено.")
+                except Exception:
+                    pass
+
+    # 2. Сохраняем ID канала в конфигурацию
     CONFIG['NAV_CHANNEL_ID'] = channel.id
     save_config(CONFIG)
-    await ctx.send(f"✅ Канал навигации установлен: {channel.mention}. ID сохранен.")
+
+    # 3. Отправляем новое сообщение навигации с кнопками
+    embed = discord.Embed(
+        title="⬇️ СИСТЕМА ПОДБОРА ПАТИ WARFRAME ⬇️",
+        description="Нажмите кнопку, чтобы начать сбор группы для миссий **Арбитраж** или **Каскад**.",
+        color=discord.Color.dark_red()
+    )
+    
+    if NAV_IMAGE_URL:
+        embed.set_image(url=NAV_IMAGE_URL)
+        
+    embed.set_footer(text="Автоматическое удаление тикетов через 1 час (требуется !set_lfg).")
+    
+    await channel.send(
+        embed=embed,
+        view=MainNavigationView(ctx.bot)
+    )
+
+    await ctx.send(f"✅ Канал навигации установлен и стартовое окно отправлено: {channel.mention}.")
+
 
 @bot.command(name='set_lfg')
 @requires_admin
@@ -839,41 +871,17 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_ready():
+    """
+    [ИСПРАВЛЕНО] Теперь on_ready только регистрирует MainNavigationView, 
+    чтобы обеспечить работу кнопок после перезапуска.
+    Отправка сообщения перенесена в !set_nav.
+    """
     print(f'Бот готов: {bot.user}')
     
-    # Регистрируем View для постоянных кнопок
+    # Регистрируем View для постоянных кнопок.
     bot.add_view(MainNavigationView(bot)) 
-
-    nav_channel_id = CONFIG.get('NAV_CHANNEL_ID')
     
-    # Логика отправки приветственного сообщения остается
-    if nav_channel_id:
-        nav_channel = bot.get_channel(nav_channel_id)
-        if nav_channel:
-            async for message in nav_channel.history(limit=5):
-                if message.author.id == bot.user.id and "СИСТЕМА ПОДБОРА ПАТИ WARFRAME" in message.content:
-                    print("Стартовое сообщение найдено. Пропуск отправки.")
-                    return
-
-            embed = discord.Embed(
-                title="⬇️ СИСТЕМА ПОДБОРА ПАТИ WARFRAME ⬇️",
-                description="Нажмите кнопку, чтобы начать сбор группы для миссий **Арбитраж** или **Каскад**.",
-                color=discord.Color.dark_red()
-            )
-            
-            if NAV_IMAGE_URL:
-                embed.set_image(url=NAV_IMAGE_URL)
-                
-            embed.set_footer(text="Автоматическое удаление тикетов через 1 час (требуется !set_lfg).")
-            
-            await nav_channel.send(
-                embed=embed,
-                view=MainNavigationView(bot)
-            )
-        else:
-            print(f"Канал навигации с ID {nav_channel_id} не найден. Проверьте ID.")
-    else:
-        print("Канал навигации не настроен. Используйте команды !set_nav, !set_lfg, !set_role в Discord.")
+    print("Логика отправки навигационного сообщения перенесена в команду !set_nav.")
 
 
 # ----------------- Блок Веб-Сервера -----------------
@@ -912,7 +920,7 @@ async def keep_alive_ping():
     async with ClientSession() as session:
         while True:
             # Пингуем каждые 14 минут (меньше, чем 15-минутный лимит Render)
-            await asyncio.sleep(11 * 60) 
+            await asyncio.sleep(14 * 60) 
             try:
                 # Отправляем HEAD запрос, чтобы не тратить лишний трафик
                 async with session.get(external_url) as response:
@@ -949,5 +957,3 @@ if __name__ == '__main__':
         print("Бот остановлен вручную.")
     except Exception as e:
         print(f"Критическая ошибка при запуске: {e}")
-
-
