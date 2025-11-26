@@ -57,9 +57,9 @@ MAP_TIERS_DATA = {
 
 # Слоты для Арбитража
 ARBITRAGE_SLOTS = [
-    "Сарина (Пребаф)",
-    "Сарина (DPS)",
-    "Вольт / Хрома",
+    "Сарина/Цит (Джейд)",
+    "Сарина/Цит",
+    "Вольт / Хрома / Локи",
     "Висп"
 ]
 
@@ -920,7 +920,7 @@ async def keep_alive_ping():
     async with ClientSession() as session:
         while True:
             # Пингуем каждые 14 минут (меньше, чем 15-минутный лимит Render)
-            await asyncio.sleep(14 * 60) 
+            await asyncio.sleep(10 * 60) 
             try:
                 # Отправляем HEAD запрос, чтобы не тратить лишний трафик
                 async with session.get(external_url) as response:
@@ -957,3 +957,4 @@ if __name__ == '__main__':
         print("Бот остановлен вручную.")
     except Exception as e:
         print(f"Критическая ошибка при запуске: {e}")
+
