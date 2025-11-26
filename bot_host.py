@@ -188,7 +188,7 @@ class PartyView(discord.ui.View):
         except json.JSONDecodeError:
             title = "🚀 Пати на Каскад Собрана!"
             description = (
-                "**Миссия:** Каскад (Бездна) \n"
+                "**Миссия:** Каскад (Зариман) \n"
                 "**Награда:** Мистификаторы (Праймхлам/Отголоски)"
             )
             color = discord.Color.dark_green()
@@ -261,7 +261,7 @@ class PartyView(discord.ui.View):
                     final_title = f"⚠️ СБОР | {self.map_info} | Нужны игроки"
                 
                 embed.add_field(name="Награда", value="Мистификаторы (Праймхлам/Отголоски)", inline=True)
-                embed.add_field(name="Тип", value="Каскад (Бездна)", inline=True)
+                embed.add_field(name="Тип", value="Каскад (Зариман)", inline=True)
                 embed.add_field(name="Истекает", value="1 час с момента создания", inline=True)
 
             else: 
@@ -957,5 +957,6 @@ if __name__ == '__main__':
         print("Бот остановлен вручную.")
     except Exception as e:
         print(f"Критическая ошибка при запуске: {e}")
+
 
 
