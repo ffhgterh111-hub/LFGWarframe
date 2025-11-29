@@ -920,7 +920,7 @@ async def keep_alive_ping():
     async with ClientSession() as session:
         while True:
             # Пингуем каждые 14 минут (меньше, чем 15-минутный лимит Render)
-            await asyncio.sleep(10 * 60) 
+            await asyncio.sleep(5 * 60) 
             try:
                 # Отправляем HEAD запрос, чтобы не тратить лишний трафик
                 async with session.get(external_url) as response:
@@ -957,6 +957,7 @@ if __name__ == '__main__':
         print("Бот остановлен вручную.")
     except Exception as e:
         print(f"Критическая ошибка при запуске: {e}")
+
 
 
 
